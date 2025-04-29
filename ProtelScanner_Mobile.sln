@@ -5,6 +5,16 @@ VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.WebService", "ProtelScanner.WebService\ProtelScanner.WebService.csproj", "{84E96226-3E5F-4276-BD03-6F44F2EA9A01}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.Service", "ProtelScanner.Service\ProtelScanner.Service.csproj", "{6837A631-AE86-4FEF-9D57-95BCCB9132F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.TestApp", "ProtelScanner.TestApp\ProtelScanner.TestApp.csproj", "{D5D2B232-8F48-4086-944F-C2B0ECA2402D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MrzReaderTest", "MrzReaderTest\MrzReaderTest.csproj", "{A402DA98-9347-4224-8F4E-8B922F89032A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScannerServerSide", "..\ProtelScanner\ProtelScannerServerSide\ProtelScannerServerSide.csproj", "{DEB9F1DB-C001-A794-630E-6494D294EE7B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientService", "..\ProtelScanner\ClientService\ClientService.csproj", "{1871CB19-335E-FDEE-856E-D2B5AECD5777}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +25,26 @@ Global
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6837A631-AE86-4FEF-9D57-95BCCB9132F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6837A631-AE86-4FEF-9D57-95BCCB9132F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6837A631-AE86-4FEF-9D57-95BCCB9132F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6837A631-AE86-4FEF-9D57-95BCCB9132F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5D2B232-8F48-4086-944F-C2B0ECA2402D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5D2B232-8F48-4086-944F-C2B0ECA2402D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5D2B232-8F48-4086-944F-C2B0ECA2402D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5D2B232-8F48-4086-944F-C2B0ECA2402D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A402DA98-9347-4224-8F4E-8B922F89032A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A402DA98-9347-4224-8F4E-8B922F89032A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A402DA98-9347-4224-8F4E-8B922F89032A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A402DA98-9347-4224-8F4E-8B922F89032A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DEB9F1DB-C001-A794-630E-6494D294EE7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEB9F1DB-C001-A794-630E-6494D294EE7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEB9F1DB-C001-A794-630E-6494D294EE7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEB9F1DB-C001-A794-630E-6494D294EE7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1871CB19-335E-FDEE-856E-D2B5AECD5777}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1871CB19-335E-FDEE-856E-D2B5AECD5777}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1871CB19-335E-FDEE-856E-D2B5AECD5777}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1871CB19-335E-FDEE-856E-D2B5AECD5777}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
