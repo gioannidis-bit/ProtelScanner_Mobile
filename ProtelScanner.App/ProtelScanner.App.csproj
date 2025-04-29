@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<!-- Only Android, so ZXing.Net.Maui will restore -->
+		<TargetFramework>net8.0-android</TargetFramework>
+		<!-- Turn on MAUI and global usings -->
+		<UseMaui>true</UseMaui>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Register the ZXing.NET.MAUI scanner -->
+		<PackageReference Include="ZXing.Net.Maui" Version="1.0.0" />
+		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.4.0" />
+	</ItemGroup>
+
+</Project>

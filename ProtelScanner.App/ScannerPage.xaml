@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:zxing="clr-namespace:ZXing.Net.Maui;assembly=ZXing.Net.Maui"
+    x:Class="ProtelScanner.App.ScannerPage"
+    Title="MRZ Scanner">
+    <Grid>
+        <zxing:CameraBarcodeReaderView
+    x:Name="BarcodeReaderView"
+    BarcodeDetected="BarcodeReaderView_BarcodeDetected"
+    VerticalOptions="FillAndExpand"
+    HorizontalOptions="FillAndExpand">
+            <zxing:CameraBarcodeReaderView.BarcodeFormats>
+                <x:Array Type="{x:Type zxing:BarcodeFormat}">
+                    <zxing:BarcodeFormat>Pdf417</zxing:BarcodeFormat>
+                </x:Array>
+            </zxing:CameraBarcodeReaderView.BarcodeFormats>
+        </zxing:CameraBarcodeReaderView>
+
+    </Grid>
+</ContentPage>

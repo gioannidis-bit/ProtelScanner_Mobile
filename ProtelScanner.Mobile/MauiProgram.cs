@@ -1,37 +1,35 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Controls.Hosting;
+﻿using Microsoft.Maui;
 using Microsoft.Maui.Hosting;
-using ProtelScanner.Mobile.Services;
+using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.MediaElement;
+using ZXing.Net.Maui;
 using Camera.MAUI;
+using ProtelScanner.Mobile.Services;
+using Microsoft.Maui.Controls.Hosting;
 
-namespace ProtelScanner.Mobile
+namespace ProtelScanner.Mobile;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .UseMauiCameraView() // Χρήση της ενημερωμένης μεθόδου για Camera.MAUI
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+        var builder = MauiApp.CreateBuilder();
 
-            // Register services
-            builder.Services.AddSingleton<IMrzScannerService, MrzScannerService>();
+        builder
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .UseMauiCommunityToolkitMediaElement()
+            .UseZXingNetMaui()
+            .UseMauiCameraView()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            });
 
-            // Register pages
-            builder.Services.AddSingleton<MainPage>();
-            builder.Services.AddTransient<ScannerPage>();
+        // Register scanner service for DI
+        builder.Services.AddSingleton<IMrzScannerService, MrzScannerService>();
 
-#if DEBUG
-            builder.Logging.AddDebug();
-#endif
-
-            return builder.Build();
-        }
+        return builder.Build();
     }
 }

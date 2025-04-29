@@ -1,47 +1,38 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:camera="clr-namespace:Camera.MAUI;assembly=Camera.MAUI"
-             x:Class="ProtelScanner.Mobile.ScannerPage"
-             Title="MRZ Scanner">
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:zxing="clr-namespace:ZXing.Net.Maui;assembly=ZXing.Net.Maui"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Class="ProtelScanner.Mobile.ScannerPage"
+    Title="MRZ Scanner">
 
     <Grid RowDefinitions="*,Auto,Auto">
-        <camera:CameraView x:Name="cameraView" 
-                    Grid.Row="0"
-                    WidthRequest="300"
-                    HeightRequest="300" 
-                    HorizontalOptions="Fill"
-                    VerticalOptions="Fill" />
-
-        <!-- Target overlay -->
-        <Rectangle Grid.Row="0"
-                   Stroke="LimeGreen"
-                   StrokeThickness="2"
-                   HeightRequest="100"
-                   WidthRequest="300"
-                   HorizontalOptions="Center"
-                   VerticalOptions="Center" />
-
-        <Label Grid.Row="0"
-               Text="Position MRZ within the rectangle"
-               TextColor="White"
-               BackgroundColor="#80000000"
-               HorizontalOptions="Center"
-               VerticalOptions="Start"
-               Margin="0,30,0,0"
-               Padding="10" />
+        <zxing:CameraBarcodeReaderView
+        x:Name="barcodeReaderView"
+        Grid.Row="0"
+        HorizontalOptions="Fill"
+        VerticalOptions="Fill"
+        IsDetecting="True"
+        BarcodeFormats="PDF_417,Code_39,Code_128">
+            <zxing:CameraBarcodeReaderView.Behaviors>
+                <toolkit:EventToCommandBehavior
+            EventName="BarcodeDetected"
+            Command="{Binding OnBarcodeDetectedCommand}"
+            EventArgsParameterPath="Result" />
+            </zxing:CameraBarcodeReaderView.Behaviors>
+        </zxing:CameraBarcodeReaderView>
 
         <Label x:Name="statusLabel"
-               Grid.Row="1"
-               Text="Scanning in progress..."
-               HorizontalOptions="Center"
-               Padding="10" />
+           Grid.Row="1"
+           Text="Scanning..."
+           HorizontalOptions="Center"
+           Padding="10"/>
 
-        <Button x:Name="doneButton"
-                Grid.Row="2"
-                Text="Done"
-                Clicked="DoneButton_Clicked"
-                HorizontalOptions="End"
-                Margin="0,0,20,20" />
+        <Button Text="Done"
+            Grid.Row="2"
+            Clicked="DoneButton_Clicked"
+            HorizontalOptions="End"
+            Margin="0,0,20,20"/>
     </Grid>
 </ContentPage>
