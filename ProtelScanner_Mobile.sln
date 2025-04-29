@@ -5,10 +5,6 @@ VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.WebService", "ProtelScanner.WebService\ProtelScanner.WebService.csproj", "{84E96226-3E5F-4276-BD03-6F44F2EA9A01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.Shared", "ProtelScanner.Shared\ProtelScanner.Shared.csproj", "{EF3A9538-67BC-434F-9B1E-16E2FB16DCB0}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtelScanner.App", "ProtelScanner.App\ProtelScanner.App.csproj", "{7527564D-5CBC-41AD-8BB9-A4113757EE63}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,16 +15,6 @@ Global
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84E96226-3E5F-4276-BD03-6F44F2EA9A01}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EF3A9538-67BC-434F-9B1E-16E2FB16DCB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EF3A9538-67BC-434F-9B1E-16E2FB16DCB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EF3A9538-67BC-434F-9B1E-16E2FB16DCB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EF3A9538-67BC-434F-9B1E-16E2FB16DCB0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7527564D-5CBC-41AD-8BB9-A4113757EE63}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

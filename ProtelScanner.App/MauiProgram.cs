@@ -1,7 +1,6 @@
-﻿using Microsoft.Maui;
-using Microsoft.Maui.Controls.Hosting;
+﻿using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
-using ZXing.Net.Maui;              // ← this is critical
+using ZXing.Net.Maui.Controls;
 
 namespace ProtelScanner.App
 {
@@ -11,12 +10,16 @@ namespace ProtelScanner.App
         {
             var builder = MauiApp.CreateBuilder();
             builder
-              .UseMauiApp<App>()
-              .UseBarcodeReader()         // ← THIS registers CameraBarcodeReaderView
-              .ConfigureFonts(fonts =>
-              {
-                  fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-              });
+                .UseMauiApp<App>()
+                .ConfigureMauiHandlers(handlers =>
+                {
+                    handlers.AddHandler<ZXing.Net.Maui.Controls.CameraBarcodeReaderView,
+                                       ZXing.Net.Maui.Handlers.CameraBarcodeReaderViewHandler>();
+                })
+                .ConfigureFonts(fonts =>
+                {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                });
 
             return builder.Build();
         }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.Maui.Controls;
+using ZXing.Net.Maui.Controls;
 using ZXing.Net.Maui;
 
 namespace ProtelScanner.App
