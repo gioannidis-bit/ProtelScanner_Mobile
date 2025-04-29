@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ProtelScanner.Mobile
 {
@@ -114,6 +116,7 @@ namespace ProtelScanner.Mobile
                 {
                     reservedBy = terminalId;
                     UpdateStatusLabel();
+                    UpdateUI();
                 });
             });
 
@@ -124,6 +127,7 @@ namespace ProtelScanner.Mobile
                 {
                     reservedBy = null;
                     UpdateStatusLabel();
+                    UpdateUI();
                 });
             });
         }
@@ -196,12 +200,12 @@ namespace ProtelScanner.Mobile
             }
         }
 
-        protected override async void OnDisappearing()
+        protected override void OnDisappearing()
         {
             base.OnDisappearing();
 
             // Συντήρηση του hub connection κατά την πλοήγηση
-            if (isConnected)
+            if (isConnected && hubConnection != null)
             {
                 App.Current.Properties["HubConnection"] = hubConnection;
             }

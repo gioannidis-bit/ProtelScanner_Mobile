@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Android.Content;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Maui.Devices;
 
 namespace ProtelScanner.Mobile.Platforms.Android.Services
 {
-    // ProtelScanner.Mobile.Platforms.Android.Services.ConnectionService.cs
     public class ConnectionService
     {
         private readonly HubConnection hubConnection;

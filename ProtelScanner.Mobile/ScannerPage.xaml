@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:camera="clr-namespace:Camera.MAUI;assembly=Camera.MAUI"
              x:Class="ProtelScanner.Mobile.ScannerPage"
              Title="MRZ Scanner">
 
     <Grid RowDefinitions="*,Auto,Auto">
-        <CameraView x:Name="cameraView" 
-                    Grid.Row="0" 
+        <camera:CameraView x:Name="cameraView" 
+                    Grid.Row="0"
+                    WidthRequest="300"
+                    HeightRequest="300" 
                     HorizontalOptions="Fill"
                     VerticalOptions="Fill" />
 
@@ -42,4 +45,3 @@
                 Margin="0,0,20,20" />
     </Grid>
 </ContentPage>
-    

@@ -5,9 +5,8 @@ using Android.OS;
 
 namespace ProtelScanner.Mobile.Platforms.Android
 {
-    // ProtelScanner.Mobile.Platforms.Android.Services.ForegroundService.cs
     [Service]
-    public class ForegroundService : Android.App.Service
+    public class ForegroundService : global::Android.App.Service
     {
         public override IBinder OnBind(Intent intent)
         {
@@ -24,10 +23,11 @@ namespace ProtelScanner.Mobile.Platforms.Android
                 var notificationManager = (NotificationManager)GetSystemService(NotificationService);
                 notificationManager.CreateNotificationChannel(channel);
 
+                // Χρήση στανταρ εικονιδίου συστήματος αντί για custom
                 var notification = new Notification.Builder(this, channelId)
                     .SetContentTitle("Protel Scanner")
                     .SetContentText("Scanner is running in background")
-                    .SetSmallIcon(Resource.Drawable.notification_icon)
+                    .SetSmallIcon(global::Android.Resource.Drawable.IcMenuCamera)
                     .Build();
 
                 StartForeground(100, notification);

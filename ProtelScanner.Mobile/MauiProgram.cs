@@ -11,11 +11,12 @@ namespace ProtelScanner.Mobile
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
-            builder.UseMauiApp<App>()
-      .UseMauiCameraView()  // Προσθέστε αυτή τη γραμμή
-      .ConfigureFonts(fonts =>
-      {
-          fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            builder
+                .UseMauiApp<App>()
+                .UseMauiCameraView()  // Προσθήκη του Camera.MAUI
+                .ConfigureFonts(fonts =>
+                {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
