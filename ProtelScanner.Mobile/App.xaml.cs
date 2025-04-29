@@ -12,6 +12,9 @@ namespace ProtelScanner.Mobile
         public static string DeviceName { get; set; }
         public static string DeviceId { get; set; }
 
+        // Dictionary για αποθήκευση αντικειμένων
+        public static Dictionary<string, object> StateItems { get; } = new Dictionary<string, object>();
+
         public App()
         {
             InitializeComponent();

@@ -1,176 +1,94 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Camera.MAUI;
-using Camera.MAUI.ZXingHelper;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Maui.Controls;
 using ProtelScanner.Mobile.Models;
+using ProtelScanner.Mobile.Services;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ProtelScanner.Mobile
 {
-    [QueryProperty(nameof(TerminalId), "TerminalId")]
     public partial class ScannerPage : ContentPage
     {
-        private HubConnection hubConnection;
-        private bool isScanning = false;
+        private readonly IMrzScannerService _mrzScannerService;
+        private string _terminalId;
+        private HubConnection _hubConnection;
 
-        public string TerminalId { get; set; }
-
-        public ScannerPage()
+        public ScannerPage(IMrzScannerService mrzScannerService)
         {
             InitializeComponent();
+            _mrzScannerService = mrzScannerService;
+            _mrzScannerService.MrzDetected += OnMrzDetected;
         }
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            // Ανάκτηση του hub connection
-            if (App.Current.Properties.ContainsKey("HubConnection"))
+            // Λήψη των παραμέτρων πλοήγησης
+            if (Shell.Current.CurrentState.RouteParameters.TryGetValue("TerminalId", out var terminalId))
             {
-                hubConnection = App.Current.Properties["HubConnection"] as HubConnection;
+                _terminalId = terminalId.ToString();
             }
 
-            if (hubConnection == null || hubConnection.State != HubConnectionState.Connected)
+            // Προσπάθεια ανάκτησης του υπάρχοντος hub connection
+            if (_hubConnection == null && AppStateManager.ContainsKey("HubConnection"))
             {
-                await DisplayAlert("Error", "Connection to server lost", "OK");
+                _hubConnection = AppStateManager.GetValue<HubConnection>("HubConnection");
+            }
+
+            // Έναρξη της κάμερας και του scanning
+            try
+            {
+                await _mrzScannerService.StartScanningAsync(cameraView);
+                statusLabel.Text = "Σάρωση σε εξέλιξη...";
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Σφάλμα", $"Σφάλμα κατά την έναρξη της κάμερας: {ex.Message}", "OK");
                 await Shell.Current.GoToAsync("..");
-                return;
             }
-
-            // Έλεγχος δικαιωμάτων κάμερας
-            var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
-            if (status != PermissionStatus.Granted)
-            {
-                status = await Permissions.RequestAsync<Permissions.Camera>();
-                if (status != PermissionStatus.Granted)
-                {
-                    await DisplayAlert("Permission Required", "Camera permission is required to scan documents", "OK");
-                    await Shell.Current.GoToAsync("..");
-                    return;
-                }
-            }
-
-            // Εκκίνηση σάρωσης
-            await StartScanningAsync();
         }
 
         protected override void OnDisappearing()
         {
             base.OnDisappearing();
-
-            // Διακοπή σάρωσης όταν κλείνει η σελίδα
-            StopScanning();
+            _mrzScannerService.StopScanning();
+            _mrzScannerService.MrzDetected -= OnMrzDetected;
         }
 
-        private async Task StartScanningAsync()
+        private async void OnMrzDetected(object sender, MrzData mrzData)
         {
-            try
-            {
-                isScanning = true;
-                statusLabel.Text = "Scanning in progress...";
-
-                // Ρύθμιση της κάμερας για αναγνώριση barcodes (θα χρησιμοποιηθεί για MRZ)
-                cameraView.BarCodeOptions = new BarcodeDecodeOptions
-                {
-                    TryHarder = true,
-                    PossibleFormats = { ZXing.BarcodeFormat.All_1D }
-                };
-
-                cameraView.BarCodeDetected += CameraView_BarCodeDetected;
-                cameraView.CameraLocation = CameraLocation.Back;
-
-                // Εκκίνηση της κάμερας
-                await cameraView.StartCameraAsync();
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Scanner Error", $"Failed to start scanner: {ex.Message}", "OK");
-                await Shell.Current.GoToAsync("..");
-            }
-        }
-
-        private void StopScanning()
-        {
-            if (!isScanning)
-                return;
-
-            isScanning = false;
-
-            cameraView.BarCodeDetected -= CameraView_BarCodeDetected;
-            cameraView.StopCamera();
-        }
-
-        private void CameraView_BarCodeDetected(object sender, BarcodeEventArgs e)
-        {
-            if (!isScanning || e.Result == null || e.Result.Count == 0)
-                return;
-
-            MainThread.BeginInvokeOnMainThread(async () =>
+            // Εκτέλεση στο κύριο thread
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 try
                 {
-                    // Αναστολή σάρωσης για αποφυγή διπλών αποτελεσμάτων
-                    cameraView.BarCodeDetected -= CameraView_BarCodeDetected;
-                    isScanning = false;
+                    // Ενημέρωση του UI
+                    statusLabel.Text = "MRZ Εντοπίστηκε!";
 
-                    // Εξαγωγή του κειμένου από το barcode (θα χρησιμοποιηθεί ως MRZ)
-                    string rawText = e.Result[0].Text;
+                    // Προσθήκη των στοιχείων ταυτοποίησης
+                    mrzData.DeviceId = App.DeviceId;
+                    mrzData.TerminalId = _terminalId;
 
-                    // Για αληθινό MRZ scanning, θα προσθέταμε εδώ ειδική επεξεργασία
-                    // Επειδή η ZXing αναγνωρίζει barcodes και όχι MRZ, θα πρέπει να δημιουργήσουμε 
-                    // ένα συνθετικό MRZ για δοκιμαστικούς σκοπούς
-
-                    // Για την επίδειξη, δημιουργούμε ένα MRZ αντικείμενο
-                    var mrzData = new MrzData
+                    // Αποστολή των δεδομένων στον server αν έχουμε ενεργή σύνδεση
+                    if (_hubConnection != null && _hubConnection.State == HubConnectionState.Connected)
                     {
-                        DeviceId = App.DeviceId,
-                        TerminalId = TerminalId,
-                        DocumentType = "P",
-                        LastName = "SMITH",
-                        FirstName = "JOHN",
-                        DocumentNumber = rawText.Length > 8 ? rawText.Substring(0, 8) : "X12345678",
-                        Nationality = "GRC",
-                        Sex = "M",
-                        BirthDate = new DateTime(1990, 1, 1),
-                        ExpirationDate = new DateTime(2030, 1, 1),
-                        IssuingCountry = "GRC",
-                        RawMrzData = rawText
-                    };
-
-                    // Αποστολή στο SignalR hub
-                    if (hubConnection != null && hubConnection.State == HubConnectionState.Connected)
-                    {
-                        await hubConnection.InvokeAsync("SendMrzData", mrzData);
-
-                        statusLabel.Text = "Document scanned successfully!";
-
-                        // Παύση για να δει ο χρήστης το μήνυμα επιτυχίας
-                        await Task.Delay(2000);
-
-                        // Επιστροφή στην προηγούμενη σελίδα
-                        await Shell.Current.GoToAsync("..");
-                    }
-                    else
-                    {
-                        throw new Exception("Connection to server lost");
+                        await _hubConnection.InvokeAsync("SendMrzData", mrzData);
+                        statusLabel.Text = "Τα δεδομένα στάλθηκαν επιτυχώς!";
                     }
                 }
                 catch (Exception ex)
                 {
-                    await DisplayAlert("Error", $"Failed to process scan: {ex.Message}", "OK");
-
-                    // Επανεκκίνηση της σάρωσης
-                    cameraView.BarCodeDetected += CameraView_BarCodeDetected;
-                    isScanning = true;
+                    statusLabel.Text = $"Σφάλμα: {ex.Message}";
                 }
             });
         }
 
         private async void DoneButton_Clicked(object sender, EventArgs e)
         {
-            StopScanning();
+            _mrzScannerService.StopScanning();
             await Shell.Current.GoToAsync("..");
         }
     }

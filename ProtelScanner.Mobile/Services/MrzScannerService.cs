@@ -2,13 +2,14 @@
 using System.Threading.Tasks;
 using Camera.MAUI;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
 using ProtelScanner.Mobile.Models;
 
 namespace ProtelScanner.Mobile.Services
 {
-    // Απλοποιημένη υλοποίηση του MrzScannerService
-    // Χρησιμοποιεί απευθείας το Camera.MAUI για σάρωση 
-    // και μια προσομοίωση της MRZ αναγνώρισης
+    // Ενημερωμένη υλοποίηση του MrzScannerService
+    // Χρησιμοποιεί το Camera.MAUI για σάρωση και
+    // παρέχει έναν απλό μηχανισμό ανίχνευσης MRZ
     public class MrzScannerService : IMrzScannerService
     {
         private bool isScanning;
@@ -26,16 +27,31 @@ namespace ProtelScanner.Mobile.Services
 
             try
             {
-                // Ρύθμιση του camera view για barcode scanning
-                cameraView.BarCodeDetected += OnBarCodeDetected;
+                // Ρύθμιση του camera view
+                cameraView.BarCodeOptions = new Camera.MAUI.ZXingHelper.BarcodeDecodeOptions
+                {
+                    TryHarder = true,
+                    PossibleFormats = new List<ZXing.BarcodeFormat> { 
+                        ZXing.BarcodeFormat.QR_CODE, 
+                        ZXing.BarcodeFormat.CODE_39, 
+                        ZXing.BarcodeFormat.CODE_128 
+                    }
+                };
+                
+                // Ρύθμιση του barcode event
+                cameraView.BarcodeDetected += OnBarcodeDetected;
 
                 // Έναρξη της κάμερας
-                await cameraView.StartCameraAsync();
+                var result = await cameraView.StartCameraAsync();
+                if (!result)
+                {
+                    throw new Exception("Δεν ήταν δυνατή η έναρξη της κάμερας");
+                }
             }
             catch (Exception ex)
             {
                 isScanning = false;
-                throw new Exception($"Failed to start camera: {ex.Message}", ex);
+                throw new Exception($"Σφάλμα κατά την έναρξη της κάμερας: {ex.Message}", ex);
             }
         }
 
@@ -45,40 +61,53 @@ namespace ProtelScanner.Mobile.Services
                 return;
 
             isScanning = false;
-            cameraView.BarCodeDetected -= OnBarCodeDetected;
-            cameraView.StopCamera();
+            cameraView.BarcodeDetected -= OnBarcodeDetected;
+            cameraView.StopCameraAsync();
         }
 
-        private void OnBarCodeDetected(object sender, Camera.MAUI.ZXingHelper.BarcodeEventArgs e)
+        private void OnBarcodeDetected(object sender, Camera.MAUI.ZXingHelper.BarcodeEventArgs e)
         {
-            if (!isScanning || e.Result == null || e.Result.Count == 0)
+            if (!isScanning || e == null || e.Result == null)
+                return;
+
+            string barcodeText = e.Result.Text;
+            if (string.IsNullOrEmpty(barcodeText))
                 return;
 
             // Προσωρινά σταματάμε την αναγνώριση για να αποφύγουμε διπλές αναγνωρίσεις
-            cameraView.BarCodeDetected -= OnBarCodeDetected;
+            cameraView.BarcodeDetected -= OnBarcodeDetected;
 
-            // Λαμβάνουμε το κείμενο από το barcode
-            string rawMrzText = e.Result[0].Text;
+            // Αναλύουμε το κείμενο για να εξάγουμε τα στοιχεία MRZ
+            // Σε πραγματική εφαρμογή θα είχαμε πιο εξελιγμένο parser
+            var mrzData = ParseMrzText(barcodeText);
 
-            // Σε ένα πραγματικό σενάριο θα επεξεργαζόμασταν το MRZ
-            // Για τους σκοπούς της επίδειξης, δημιουργούμε ένα συνθετικό MrzData
+            // Πυροδοτούμε το event για να ενημερώσουμε τους listeners
+            MainThread.BeginInvokeOnMainThread(() => {
+                MrzDetected?.Invoke(this, mrzData);
+            });
+        }
 
+        private MrzData ParseMrzText(string rawText)
+        {
+            // Απλοποιημένο parsing για demo
+            // Σε πραγματική εφαρμογή θα είχαμε πιο πολύπλοκο parsing
+
+            // Δημιουργούμε ένα δοκιμαστικό MrzData
             var mrzData = new MrzData
             {
                 DocumentType = "P", // Passport
                 LastName = "SMITH",
                 FirstName = "JOHN",
-                DocumentNumber = rawMrzText.Length > 8 ? rawMrzText.Substring(0, 8) : "X12345678",
+                DocumentNumber = rawText.Length > 8 ? rawText.Substring(0, 8) : "X12345678",
                 Nationality = "GRC",
                 Sex = "M",
-                BirthDate = new DateTime(1990, 1, 1),
-                ExpirationDate = new DateTime(2030, 1, 1),
+                BirthDate = DateTime.Now.AddYears(-30),
+                ExpirationDate = DateTime.Now.AddYears(5),
                 IssuingCountry = "GRC",
-                RawMrzData = rawMrzText
+                RawMrzData = rawText
             };
 
-            // Πυροδοτούμε το event για να ενημερώσουμε τους listeners
-            MrzDetected?.Invoke(this, mrzData);
+            return mrzData;
         }
     }
 }

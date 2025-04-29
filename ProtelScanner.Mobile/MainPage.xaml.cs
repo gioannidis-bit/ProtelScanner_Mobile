@@ -207,7 +207,7 @@ namespace ProtelScanner.Mobile
             // Συντήρηση του hub connection κατά την πλοήγηση
             if (isConnected && hubConnection != null)
             {
-                App.Current.Properties["HubConnection"] = hubConnection;
+                AppStateManager.SetValue("HubConnection", hubConnection);
             }
         }
     }

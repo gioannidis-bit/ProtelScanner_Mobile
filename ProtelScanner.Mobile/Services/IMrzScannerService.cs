@@ -1,5 +1,6 @@
 ﻿using System;
-using Microsoft.Maui.Controls;
+using System.Threading.Tasks;
+using Camera.MAUI;
 using ProtelScanner.Mobile.Models;
 
 namespace ProtelScanner.Mobile.Services

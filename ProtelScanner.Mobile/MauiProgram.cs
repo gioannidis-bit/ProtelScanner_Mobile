@@ -13,7 +13,7 @@ namespace ProtelScanner.Mobile
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
-                .UseMauiCameraView()  // Προσθήκη του Camera.MAUI
+                .UseMauiCameraView() // Χρήση της ενημερωμένης μεθόδου για Camera.MAUI
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -24,7 +24,7 @@ namespace ProtelScanner.Mobile
             builder.Services.AddSingleton<IMrzScannerService, MrzScannerService>();
 
             // Register pages
-            builder.Services.AddTransient<MainPage>();
+            builder.Services.AddSingleton<MainPage>();
             builder.Services.AddTransient<ScannerPage>();
 
 #if DEBUG
