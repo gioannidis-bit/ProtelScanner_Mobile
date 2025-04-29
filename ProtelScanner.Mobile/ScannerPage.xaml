@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ProtelScanner.Mobile.ScannerPage"
+             Title="MRZ Scanner">
+
+    <Grid RowDefinitions="*,Auto,Auto">
+        <CameraView x:Name="cameraView" 
+                    Grid.Row="0" 
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill" />
+
+        <!-- Target overlay -->
+        <Rectangle Grid.Row="0"
+                   Stroke="LimeGreen"
+                   StrokeThickness="2"
+                   HeightRequest="100"
+                   WidthRequest="300"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+
+        <Label Grid.Row="0"
+               Text="Position MRZ within the rectangle"
+               TextColor="White"
+               BackgroundColor="#80000000"
+               HorizontalOptions="Center"
+               VerticalOptions="Start"
+               Margin="0,30,0,0"
+               Padding="10" />
+
+        <Label x:Name="statusLabel"
+               Grid.Row="1"
+               Text="Scanning in progress..."
+               HorizontalOptions="Center"
+               Padding="10" />
+
+        <Button x:Name="doneButton"
+                Grid.Row="2"
+                Text="Done"
+                Clicked="DoneButton_Clicked"
+                HorizontalOptions="End"
+                Margin="0,0,20,20" />
+    </Grid>
+</ContentPage>
+    

@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ProtelScanner.Mobile.MainPage"
+             Title="Protel Scanner">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <Image Source="app_icon.png"
+                   HeightRequest="100"
+                   HorizontalOptions="Center" />
+
+            <Label Text="Protel MRZ Scanner"
+                   FontSize="24"
+                   HorizontalOptions="Center" />
+
+            <Frame Padding="15" BorderColor="Gray" CornerRadius="10">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Server Settings" FontSize="18" FontAttributes="Bold" />
+
+                    <Label Text="Server URL" />
+                    <Entry x:Name="serverUrlEntry" 
+                           Placeholder="https://your-server.com"
+                           Keyboard="Url" />
+
+                    <Label Text="Device Name" />
+                    <Entry x:Name="deviceNameEntry" 
+                           Placeholder="e.g. Reception Smartphone 1" />
+
+                    <Button x:Name="connectButton" 
+                            Text="Connect"
+                            Clicked="ConnectButton_Clicked"
+                            Margin="0,10,0,0" />
+
+                    <Label x:Name="statusLabel"
+                           Text="Status: Disconnected"
+                           HorizontalOptions="Center"
+                           Margin="0,10,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button x:Name="scanButton"
+                    Text="Start Scanning"
+                    Clicked="ScanButton_Clicked"
+                    IsEnabled="False"
+                    HeightRequest="60"
+                    FontSize="18"
+                    Margin="0,20,0,0" />
+
+            <Label Text="Instructions: Connect to the server first. When this device is reserved by a terminal, you can press 'Start Scanning' or wait for the terminal to wake up this device for scanning."
+                   FontSize="14"
+                   TextColor="Gray"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
