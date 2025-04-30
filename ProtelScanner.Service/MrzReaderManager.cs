@@ -384,6 +384,9 @@ namespace ProtelScanner.Service
 
         #endregion
 
+
+
+        // Desko reader instance
         #region Desko Reader Implementation
 
         // Desko reader instance
@@ -399,7 +402,7 @@ namespace ProtelScanner.Service
                 _deskoReader = new Readers.DeskoReaderIntegration(_logger);
 
                 // Set up the MRZ data received handler
-                _deskoReader.OnMrzDataReceived += (mrzData) => {
+                _deskoReader.OnMrzDataReceived += (string mrzData) => {
                     _logger.LogInformation("MRZ data received from Desko reader");
                     OnMrzDataReceived?.Invoke(mrzData);
                 };
@@ -433,7 +436,14 @@ namespace ProtelScanner.Service
                 if (_deskoReader != null)
                 {
                     // Clean up resources
-                    _deskoReader.OnMrzDataReceived -= OnMrzDataReceived;
+                    if (_deskoReader.OnMrzDataReceived != null)
+                    {
+                        foreach (Readers.DeskoReaderIntegration.MrzDataReceivedHandler handler in
+                                 _deskoReader.OnMrzDataReceived.GetInvocationList())
+                        {
+                            _deskoReader.OnMrzDataReceived -= handler;
+                        }
+                    }
                     _deskoReader.Cleanup();
                     _deskoReader.Dispose();
                     _deskoReader = null;
@@ -472,7 +482,7 @@ namespace ProtelScanner.Service
                 _idBoxReader = new Readers.IDBoxReaderIntegration(_logger, _settings.ComPort);
 
                 // Set up the MRZ data received handler
-                _idBoxReader.OnMrzDataReceived += (mrzData) => {
+                _idBoxReader.OnMrzDataReceived += (string mrzData) => {
                     _logger.LogInformation("MRZ data received from IDBox reader");
                     OnMrzDataReceived?.Invoke(mrzData);
                 };
@@ -506,7 +516,14 @@ namespace ProtelScanner.Service
                 if (_idBoxReader != null)
                 {
                     // Clean up resources
-                    _idBoxReader.OnMrzDataReceived -= OnMrzDataReceived;
+                    if (_idBoxReader.OnMrzDataReceived != null)
+                    {
+                        foreach (Readers.IDBoxReaderIntegration.MrzDataReceivedHandler handler in
+                                 _idBoxReader.OnMrzDataReceived.GetInvocationList())
+                        {
+                            _idBoxReader.OnMrzDataReceived -= handler;
+                        }
+                    }
                     _idBoxReader.Cleanup();
                     _idBoxReader.Dispose();
                     _idBoxReader = null;

@@ -18,25 +18,10 @@ namespace ProtelScanner.Service.Configuration
         public int ReconnectIntervalSeconds { get; set; } = 5;
     }
 
-    public class MrzReaderSettings
-    {
-        public string MrzDefinitionFile { get; set; } = "Documents.xml";
-        public int DevicePollIntervalMs { get; set; } = 1000;
-        public bool EnableLogging { get; set; } = true;
-        public string ComPort { get; set; } = ""; // For serial MRZ readers
-        public RowSeparatorType RowSeparator { get; set; } = RowSeparatorType.NewLine;
-    }
-
     public class DeviceConfig
     {
         public string Name { get; set; } = "";
         public string DeviceId { get; set; } = ""; // Only used if your service needs to identify specific devices
         public bool Enabled { get; set; } = true;
-    }
-
-    public enum RowSeparatorType
-    {
-        NewLine,
-        NewLineBreak
     }
 }
