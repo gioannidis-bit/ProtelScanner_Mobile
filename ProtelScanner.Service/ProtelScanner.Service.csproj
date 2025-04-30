@@ -5,6 +5,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<Platforms>AnyCPU;x86</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -54,13 +55,18 @@
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 		<PackageReference Include="System.IO.Ports" Version="9.0.4" />
 		<PackageReference Include="System.Management" Version="6.0.0" />
-		<PackageReference Include="System.IO.Ports" Version="6.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="MrzParser">
-			<HintPath>.\libs\MrzParser.dll</HintPath>
+			<HintPath>.\Libs\MrzParser.dll</HintPath>
 		</Reference>
+			<Reference Include="Access_IS_MSR">
+				<HintPath>.\Libs\Access_IS_MSR.dll</HintPath>
+			</Reference>
+			<Reference Include="HidApi">
+				<HintPath>.\Libs\HidApi.dll</HintPath>
+			</Reference>		
 	</ItemGroup>
 
 	<ItemGroup>
@@ -70,16 +76,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="HidApiDotNet">
-			<HintPath>.\Libs\HidApiDotNet.dll</HintPath>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="MrzParser">
-			<HintPath>.\Libs\MrzParser.dll</HintPath>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
+	  <Folder Include="Logs\" />
 	</ItemGroup>
 
 </Project>

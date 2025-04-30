@@ -1,4 +1,4 @@
-﻿using Desko.HidApi;
+﻿
 using Microsoft.Extensions.Logging;
 using ProtelScanner.Service.Configuration;
 using System;

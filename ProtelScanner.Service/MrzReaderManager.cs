@@ -11,10 +11,12 @@ using System.Linq;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ProtelScanner.Service
 {
-    // Add these classes to your project
+    // Document description classes (unchanged)
     public class MrzDocDescription
     {
         public int Rows { get; set; }
@@ -42,21 +44,75 @@ namespace ProtelScanner.Service
         }
     }
 
+    // Reader type enum to support multiple reader types
+    public enum ReaderType
+    {
+        None,
+        AccessIS,
+        Desko,
+        IDBox
+    }
 
     public class MrzReaderManager : IDisposable
     {
+        #region AccessIS P/Invoke Declarations
+
+        // Delegate types for AccessIS callbacks
+        private delegate void msrDelegate(ref uint Parameter, [MarshalAs(UnmanagedType.LPStr)] StringBuilder data, int dataSize);
+        private delegate void msrConnectionDelegate(ref uint Parameter, bool connectionStatus);
+
+        // Keep references to prevent garbage collection
+        private msrDelegate? _msrData;
+        private msrConnectionDelegate? _msrDataConnection;
+
+        // P/Invoke declarations for Access_IS_MSR.dll
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi, SetLastError = true)]
+        private static extern void initialiseMsr(bool managedCode);
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        private static extern void msrRelease();
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        private static extern bool enableMSR();
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        private static extern bool disableMSR();
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        [return: MarshalAs(UnmanagedType.LPStr)]
+        private static extern string getDeviceName();
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall)]
+        private static extern bool registerMSRCallback(msrDelegate Callback, ref uint Parameter);
+
+        [DllImport("Access_IS_MSR.dll", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
+        private static extern bool registerMSRConnectionCallback(msrConnectionDelegate Callback, ref uint Parameter);
+
+        #endregion
+
+        #region Private Fields
+
         private readonly ILogger<MrzReaderManager> _logger;
         private readonly MrzReaderSettings _settings;
         private readonly WebServiceClient _webServiceClient;
-        private List<MrzDocDescription> _documentDescriptions;
+        private List<MrzDocDescription> _documentDescriptions = new();
         private string _rowsSeparator = "\r\n";
         private Timer? _pollingTimer;
+        private Timer? _reconnectTimer;
         private bool _isProcessing = false;
         private bool _disposed = false;
+        private ReaderType _currentReaderType = ReaderType.None;
+        private bool _isConnected = false;
+        private object _deviceLock = new object();
 
-        // Event definitions remain the same
+        #endregion
+
+        #region Events and Delegates
+
         public delegate void MrzDataReceivedHandler(string mrzData);
         public event MrzDataReceivedHandler? OnMrzDataReceived;
+
+        #endregion
 
         public MrzReaderManager(ILogger<MrzReaderManager> logger, MrzReaderSettings settings, WebServiceClient webServiceClient)
         {
@@ -64,7 +120,6 @@ namespace ProtelScanner.Service
             _settings = settings;
             _webServiceClient = webServiceClient;
             _rowsSeparator = settings.RowSeparator == RowSeparatorType.NewLine ? "\r\n" : "\r";
-            _documentDescriptions = new List<MrzDocDescription>();
         }
 
         public void Initialize(CancellationToken cancellationToken = default)
@@ -84,19 +139,19 @@ namespace ProtelScanner.Service
                 _logger.LogInformation("Loaded {Count} document descriptions from {FilePath}",
                     _documentDescriptions.Count, mrzDefinitionFile);
 
-                // Rest of initialization (timer setup, etc.) remains the same
-                if (!string.IsNullOrEmpty(_settings.ComPort))
-                {
-                    // COM port reader setup
-                    _logger.LogInformation("COM port reader not implemented yet");
-                }
-
-                // Set up the polling timer
-                _pollingTimer = new Timer(_ => PollForMrzData(), null,
-                    TimeSpan.Zero, TimeSpan.FromMilliseconds(_settings.DevicePollIntervalMs));
-
-                // Set up test data handler
+                // Set up the event handler
                 OnMrzDataReceived += ProcessMrzData;
+
+                // Determine reader type based on configuration
+                _currentReaderType = DetermineReaderType();
+                _logger.LogInformation("Using reader type: {ReaderType}", _currentReaderType);
+
+                // Initialize the reader
+                InitializeReader();
+
+                // Set up auto-reconnect timer 
+                _reconnectTimer = new Timer(_ => CheckAndReconnectReader(), null,
+                    TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
                 _logger.LogInformation("MRZ Reader Manager initialized");
             }
@@ -105,6 +160,369 @@ namespace ProtelScanner.Service
                 _logger.LogError(ex, "Error initializing MRZ Reader Manager");
             }
         }
+
+        private ReaderType DetermineReaderType()
+        {
+            // Use settings or environment to determine which reader to use
+            // For now, we'll use a simplified approach based on settings
+
+            if (!string.IsNullOrEmpty(_settings.ReaderType))
+            {
+                if (_settings.ReaderType.Equals("AccessIS", StringComparison.OrdinalIgnoreCase))
+                    return ReaderType.AccessIS;
+                if (_settings.ReaderType.Equals("Desko", StringComparison.OrdinalIgnoreCase))
+                    return ReaderType.Desko;
+                if (_settings.ReaderType.Equals("IDBox", StringComparison.OrdinalIgnoreCase))
+                    return ReaderType.IDBox;
+            }
+
+            // Try auto-detection by looking for available DLLs
+            if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Access_IS_MSR.dll")))
+                return ReaderType.AccessIS;
+
+            // Additional detection logic can be added here
+
+            // Default to AccessIS as it's the one we've tested
+            return ReaderType.AccessIS;
+        }
+
+        private void InitializeReader()
+        {
+            try
+            {
+                // Clean up any existing connections first
+                CleanupCurrentReader();
+
+                switch (_currentReaderType)
+                {
+                    case ReaderType.AccessIS:
+                        InitializeAccessISReader();
+                        break;
+                    case ReaderType.Desko:
+                        InitializeDeskoReader();
+                        break;
+                    case ReaderType.IDBox:
+                        InitializeIDBoxReader();
+                        break;
+                    default:
+                        _logger.LogWarning("No reader type specified or detected");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing reader");
+                _isConnected = false;
+            }
+        }
+
+        private void CleanupCurrentReader()
+        {
+            try
+            {
+                lock (_deviceLock)
+                {
+                    switch (_currentReaderType)
+                    {
+                        case ReaderType.AccessIS:
+                            CleanupAccessISReader();
+                            break;
+                        case ReaderType.Desko:
+                            CleanupDeskoReader();
+                            break;
+                        case ReaderType.IDBox:
+                            CleanupIDBoxReader();
+                            break;
+                    }
+
+                    _isConnected = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up reader");
+            }
+        }
+
+        private void CheckAndReconnectReader()
+        {
+            try
+            {
+                lock (_deviceLock)
+                {
+                    if (!_isConnected)
+                    {
+                        _logger.LogInformation("Reader is not connected. Attempting to reconnect...");
+                        InitializeReader();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reconnecting reader");
+            }
+        }
+
+        #region AccessIS Reader Implementation
+
+        private void InitializeAccessISReader()
+        {
+            try
+            {
+                _logger.LogInformation("Initializing Access IS MSR reader");
+
+                // Initialize the MSR reader
+                initialiseMsr(true);
+                _logger.LogInformation("MSR reader initialized");
+
+                // Set up callback handlers
+                uint val = 0;
+                _msrData = AccessIS_MrzDataCallback;
+                _msrDataConnection = AccessIS_ConnectionCallback;
+
+                // Register callbacks
+                bool callbackRegistered = registerMSRCallback(_msrData, ref val);
+                _logger.LogInformation("Data callback registered: {Result}", callbackRegistered);
+
+                bool connectionCallbackRegistered = registerMSRConnectionCallback(_msrDataConnection, ref val);
+                _logger.LogInformation("Connection callback registered: {Result}", connectionCallbackRegistered);
+
+                // Try to get device name
+                try
+                {
+                    string deviceName = getDeviceName();
+                    _logger.LogInformation("Device name: {DeviceName}", deviceName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Could not get device name: {ErrorMessage}", ex.Message);
+                }
+
+                // Enable the reader
+                bool enabled = enableMSR();
+                _logger.LogInformation("Reader enabled: {Result}", enabled);
+
+                _isConnected = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing Access IS MSR reader");
+                _isConnected = false;
+                throw;
+            }
+        }
+
+        private void CleanupAccessISReader()
+        {
+            try
+            {
+                _logger.LogInformation("Cleaning up Access IS MSR reader");
+
+                // Unregister callbacks if they were set
+                if (_msrData != null || _msrDataConnection != null)
+                {
+                    uint val = 0;
+                    registerMSRCallback(null, ref val);
+                    registerMSRConnectionCallback(null, ref val);
+                }
+
+                // Release MSR resources
+                msrRelease();
+
+                // Clear callback references
+                _msrData = null;
+                _msrDataConnection = null;
+
+                _logger.LogInformation("Access IS MSR reader cleaned up");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up Access IS MSR reader");
+            }
+        }
+
+        private void AccessIS_MrzDataCallback(ref uint Parameter, [MarshalAs(UnmanagedType.LPStr)] StringBuilder data, int dataSize)
+        {
+            if (data == null || dataSize <= 0)
+                return;
+
+            try
+            {
+                string mrzData = data.ToString();
+                _logger.LogInformation("Received MRZ data from Access IS reader ({Length} bytes)", dataSize);
+
+                // Pass to the common handler
+                OnMrzDataReceived?.Invoke(mrzData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing Access IS MRZ data");
+            }
+        }
+
+        private void AccessIS_ConnectionCallback(ref uint Parameter, bool connectionStatus)
+        {
+            try
+            {
+                lock (_deviceLock)
+                {
+                    _isConnected = connectionStatus;
+                    _logger.LogInformation("Access IS connection status changed: {Status}", connectionStatus);
+
+                    // If disconnected, we'll let the reconnect timer handle it
+                    if (!connectionStatus)
+                    {
+                        _logger.LogWarning("Access IS reader disconnected");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Access IS connection callback");
+            }
+        }
+
+        #endregion
+
+        #region Desko Reader Implementation
+
+        // Desko reader instance
+        private Readers.DeskoReaderIntegration? _deskoReader;
+
+        private void InitializeDeskoReader()
+        {
+            try
+            {
+                _logger.LogInformation("Initializing Desko reader");
+
+                // Create the Desko reader integration
+                _deskoReader = new Readers.DeskoReaderIntegration(_logger);
+
+                // Set up the MRZ data received handler
+                _deskoReader.OnMrzDataReceived += (mrzData) => {
+                    _logger.LogInformation("MRZ data received from Desko reader");
+                    OnMrzDataReceived?.Invoke(mrzData);
+                };
+
+                // Initialize the reader
+                bool success = _deskoReader.Initialize();
+                _isConnected = success;
+
+                if (success)
+                {
+                    _logger.LogInformation("Desko reader initialized successfully");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to initialize Desko reader");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing Desko reader");
+                _isConnected = false;
+            }
+        }
+
+        private void CleanupDeskoReader()
+        {
+            try
+            {
+                _logger.LogInformation("Cleaning up Desko reader");
+
+                if (_deskoReader != null)
+                {
+                    // Clean up resources
+                    _deskoReader.OnMrzDataReceived -= OnMrzDataReceived;
+                    _deskoReader.Cleanup();
+                    _deskoReader.Dispose();
+                    _deskoReader = null;
+
+                    _logger.LogInformation("Desko reader cleaned up successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up Desko reader");
+            }
+        }
+
+        #endregion
+
+        #region IDBox Reader Implementation
+
+        // IDBox reader instance
+        private Readers.IDBoxReaderIntegration? _idBoxReader;
+
+        private void InitializeIDBoxReader()
+        {
+            try
+            {
+                _logger.LogInformation("Initializing IDBox reader");
+
+                // Check if COM port is specified
+                if (string.IsNullOrEmpty(_settings.ComPort))
+                {
+                    _logger.LogError("COM port not specified for IDBox reader");
+                    _isConnected = false;
+                    return;
+                }
+
+                // Create the IDBox reader integration
+                _idBoxReader = new Readers.IDBoxReaderIntegration(_logger, _settings.ComPort);
+
+                // Set up the MRZ data received handler
+                _idBoxReader.OnMrzDataReceived += (mrzData) => {
+                    _logger.LogInformation("MRZ data received from IDBox reader");
+                    OnMrzDataReceived?.Invoke(mrzData);
+                };
+
+                // Initialize the reader
+                bool success = _idBoxReader.Initialize();
+                _isConnected = success;
+
+                if (success)
+                {
+                    _logger.LogInformation("IDBox reader initialized successfully");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to initialize IDBox reader");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing IDBox reader");
+                _isConnected = false;
+            }
+        }
+
+        private void CleanupIDBoxReader()
+        {
+            try
+            {
+                _logger.LogInformation("Cleaning up IDBox reader");
+
+                if (_idBoxReader != null)
+                {
+                    // Clean up resources
+                    _idBoxReader.OnMrzDataReceived -= OnMrzDataReceived;
+                    _idBoxReader.Cleanup();
+                    _idBoxReader.Dispose();
+                    _idBoxReader = null;
+
+                    _logger.LogInformation("IDBox reader cleaned up successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up IDBox reader");
+            }
+        }
+
+        #endregion
+
+        #region Document Processing
 
         private void LoadDocumentDescriptions(string xmlFilePath)
         {
@@ -164,47 +582,6 @@ namespace ProtelScanner.Service
             return node.Attributes?[attrName]?.Value ?? string.Empty;
         }
 
-        // Helper method to get document type from the record
-        private string GetDocumentType(MrzRecord record)
-        {
-            // Try different property names that might exist in MrzRecord
-            try
-            {
-                // Using reflection to find the right property
-                var documentTypeProperty = record.GetType().GetProperty("DocumentType")
-                    ?? record.GetType().GetProperty("documentType")
-                    ?? record.GetType().GetProperty("DocumentCode")
-                    ?? record.GetType().GetProperty("documentCode");
-
-                if (documentTypeProperty != null)
-                {
-                    var value = documentTypeProperty.GetValue(record);
-                    return value?.ToString() ?? "P";
-                }
-
-                // If no property is found, check for field instead of property
-                var documentTypeField = record.GetType().GetField("DocumentType")
-                    ?? record.GetType().GetField("documentType")
-                    ?? record.GetType().GetField("DocumentCode")
-                    ?? record.GetType().GetField("documentCode");
-
-                if (documentTypeField != null)
-                {
-                    var value = documentTypeField.GetValue(record);
-                    return value?.ToString() ?? "P";
-                }
-
-                // If still not found, return a default value
-                return "P";
-            }
-            catch
-            {
-                // If anything goes wrong, return a default value
-                return "P";
-            }
-        }
-
-
         private int GetIntAttribute(XmlNode node, string attrName)
         {
             var value = GetStringAttribute(node, attrName);
@@ -213,15 +590,7 @@ namespace ProtelScanner.Service
             return int.TryParse(value, out int result) ? result : 0;
         }
 
-
-        private void PollForMrzData()
-        {
-            // In a real implementation, you would poll your USB device here
-            // For now, this is just a placeholder
-            // The actual scanning will happen through external triggers or your specific hardware interface
-        }
-
-        // This method would be called by your USB reader interface when data is received
+        // This method is the common entry point for all reader types
         public void ProcessMrzData(string mrzText)
         {
             if (_isProcessing || string.IsNullOrWhiteSpace(mrzText))
@@ -233,8 +602,6 @@ namespace ProtelScanner.Service
                 _logger.LogDebug("Processing MRZ data: {MrzText}", mrzText);
 
                 // Create MrzParser and parse the data
-                // This assumes your MrzParser can work with our custom document descriptions
-                // You may need to adapt this part based on your MrzParser's API
                 MrzParser parser = new MrzParser(mrzText, _rowsSeparator);
 
                 // Convert our document descriptions to the format expected by MrzParser
@@ -248,10 +615,6 @@ namespace ProtelScanner.Service
                     _logger.LogWarning("No matching document template for MRZ data");
                     return;
                 }
-
-                // The rest of the method continues with handling the parsed record
-                // (Convert to MrzData, handle dates, send to web service, etc.)
-                // ...
 
                 // Create MrzData model
                 var mrzData = new Models.MrzData
@@ -325,8 +688,46 @@ namespace ProtelScanner.Service
             }
         }
 
+        // Helper method to get document type from the record
+        private string GetDocumentType(MrzRecord record)
+        {
+            try
+            {
+                // Using reflection to find the right property
+                var documentTypeProperty = record.GetType().GetProperty("DocumentType")
+                    ?? record.GetType().GetProperty("documentType")
+                    ?? record.GetType().GetProperty("DocumentCode")
+                    ?? record.GetType().GetProperty("documentCode");
+
+                if (documentTypeProperty != null)
+                {
+                    var value = documentTypeProperty.GetValue(record);
+                    return value?.ToString() ?? "P";
+                }
+
+                // If no property is found, check for field instead of property
+                var documentTypeField = record.GetType().GetField("DocumentType")
+                    ?? record.GetType().GetField("documentType")
+                    ?? record.GetType().GetField("DocumentCode")
+                    ?? record.GetType().GetField("documentCode");
+
+                if (documentTypeField != null)
+                {
+                    var value = documentTypeField.GetValue(record);
+                    return value?.ToString() ?? "P";
+                }
+
+                // If still not found, return a default value
+                return "P";
+            }
+            catch
+            {
+                // If anything goes wrong, return a default value
+                return "P";
+            }
+        }
+
         // This method converts our custom document descriptions to the format expected by MrzParser
-        // You'll need to adapt this based on what your MrzParser actually expects
         private List<PassToProtel.XmlDocsDescr.DocDescr> ConvertToMrzParserFormat(List<MrzDocDescription> descriptions)
         {
             var result = new List<PassToProtel.XmlDocsDescr.DocDescr>();
@@ -472,11 +873,25 @@ namespace ProtelScanner.Service
             return result;
         }
 
+        #endregion
+
+        #region Utility Methods
+
+        private void PollForMrzData()
+        {
+            // This method is no longer needed with our callback-based approach
+            // But we keep it for compatibility
+        }
+
         // For testing - allows simulating a scan programmatically
         public void SimulateScan(string mrzData)
         {
             OnMrzDataReceived?.Invoke(mrzData);
         }
+
+        #endregion
+
+        #region IDisposable Implementation
 
         public void Dispose()
         {
@@ -491,11 +906,14 @@ namespace ProtelScanner.Service
                 if (disposing)
                 {
                     _pollingTimer?.Dispose();
-                    // Close any other resources here
+                    _reconnectTimer?.Dispose();
+                    CleanupCurrentReader();
                 }
 
                 _disposed = true;
             }
         }
+
+        #endregion
     }
 }
