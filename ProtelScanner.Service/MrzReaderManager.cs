@@ -391,6 +391,7 @@ namespace ProtelScanner.Service
 
         // Desko reader instance
         private Readers.DeskoReaderIntegration? _deskoReader;
+        private Readers.DeskoReaderIntegration.MrzDataReceivedHandler? _deskoMrzHandler;
 
         private void InitializeDeskoReader()
         {
@@ -402,10 +403,13 @@ namespace ProtelScanner.Service
                 _deskoReader = new Readers.DeskoReaderIntegration(_logger);
 
                 // Set up the MRZ data received handler
-                _deskoReader.OnMrzDataReceived += (string mrzData) => {
+                _deskoMrzHandler = mrzData =>
+                {
                     _logger.LogInformation("MRZ data received from Desko reader");
                     OnMrzDataReceived?.Invoke(mrzData);
                 };
+                _deskoReader.OnMrzDataReceived += _deskoMrzHandler;
+            
 
                 // Initialize the reader
                 bool success = _deskoReader.Initialize();
@@ -436,13 +440,10 @@ namespace ProtelScanner.Service
                 if (_deskoReader != null)
                 {
                     // Clean up resources
-                    if (_deskoReader.OnMrzDataReceived != null)
+                    if (_deskoMrzHandler != null)
                     {
-                        foreach (Readers.DeskoReaderIntegration.MrzDataReceivedHandler handler in
-                                 _deskoReader.OnMrzDataReceived.GetInvocationList())
-                        {
-                            _deskoReader.OnMrzDataReceived -= handler;
-                        }
+                        _deskoReader.OnMrzDataReceived -= _deskoMrzHandler;
+                        _deskoMrzHandler = null;
                     }
                     _deskoReader.Cleanup();
                     _deskoReader.Dispose();
@@ -463,6 +464,7 @@ namespace ProtelScanner.Service
 
         // IDBox reader instance
         private Readers.IDBoxReaderIntegration? _idBoxReader;
+        private Readers.IDBoxReaderIntegration.MrzDataReceivedHandler? _idBoxMrzHandler;
 
         private void InitializeIDBoxReader()
         {
@@ -482,10 +484,12 @@ namespace ProtelScanner.Service
                 _idBoxReader = new Readers.IDBoxReaderIntegration(_logger, _settings.ComPort);
 
                 // Set up the MRZ data received handler
-                _idBoxReader.OnMrzDataReceived += (string mrzData) => {
+                _idBoxMrzHandler = mrzData =>
+                {
                     _logger.LogInformation("MRZ data received from IDBox reader");
                     OnMrzDataReceived?.Invoke(mrzData);
                 };
+                _idBoxReader.OnMrzDataReceived += _idBoxMrzHandler;
 
                 // Initialize the reader
                 bool success = _idBoxReader.Initialize();
@@ -516,14 +520,12 @@ namespace ProtelScanner.Service
                 if (_idBoxReader != null)
                 {
                     // Clean up resources
-                    if (_idBoxReader.OnMrzDataReceived != null)
+                    if (_idBoxMrzHandler != null)
                     {
-                        foreach (Readers.IDBoxReaderIntegration.MrzDataReceivedHandler handler in
-                                 _idBoxReader.OnMrzDataReceived.GetInvocationList())
-                        {
-                            _idBoxReader.OnMrzDataReceived -= handler;
-                        }
+                        _idBoxReader.OnMrzDataReceived -= _idBoxMrzHandler;
+                        _idBoxMrzHandler = null;
                     }
+
                     _idBoxReader.Cleanup();
                     _idBoxReader.Dispose();
                     _idBoxReader = null;
